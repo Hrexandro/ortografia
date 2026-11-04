@@ -1,0 +1,742 @@
+
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ż czy RZ? – Gra ortograficzna</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f0eefb;
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+
+    .game {
+      background: white;
+      width: 100%;
+      max-width: 650px;
+      padding: 35px;
+      border-radius: 24px;
+      box-shadow: 0 10px 35px #00000012;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 38px;
+      margin: 5px 0 10px;
+      color: #312a5e;
+    }
+
+    .subtitle {
+      color: #777;
+      font-size: 15px;
+    }
+
+    .stats {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 35px;
+      font-weight: bold;
+      color: #444;
+    }
+
+    .progress {
+      height: 10px;
+      background: #e8e5f2;
+      border-radius: 10px;
+      margin-top: 15px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0;
+      background: #7964dc;
+      transition: width 0.3s;
+    }
+
+    .question {
+      font-size: 23px;
+      font-weight: bold;
+      margin: 45px 0 30px;
+      color: #333;
+    }
+
+    .choices {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+
+    .choice {
+      border: 4px solid transparent;
+      border-radius: 18px;
+      padding: 25px 8px;
+      min-height: 135px;
+      color: white;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .choice:hover:not(:disabled) {
+      transform: translateY(-3px);
+      filter: brightness(1.1);
+    }
+
+    .left {
+      background: #7466d9;
+    }
+
+    .right {
+      background: #dd904b;
+    }
+
+    .word {
+      display: block;
+      font-size: clamp(19px, 4vw, 30px);
+      font-weight: bold;
+      overflow-wrap: anywhere;
+    }
+
+    .key {
+      display: block;
+      font-size: 13px;
+      margin-top: 15px;
+      opacity: 0.85;
+    }
+
+    .choice.correct {
+      background: #28a36d;
+      border-color: #16794e;
+    }
+
+    .choice.wrong {
+      background: #df615e;
+      border-color: #ad3636;
+    }
+
+    .choice:disabled {
+      cursor: default;
+    }
+
+    .feedback {
+      height: 75px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    .good-text {
+      color: #279d6b;
+    }
+
+    .bad-text {
+      color: #d35b48;
+    }
+
+    .next {
+      display: block;
+      width: 100%;
+      padding: 17px;
+      background: #7466d9;
+      color: white;
+      border: none;
+      border-radius: 14px;
+      font-size: 17px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .next:hover {
+      background: #6254c1;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .result {
+      font-size: 65px;
+      font-weight: bold;
+      color: #7466d9;
+      margin: 25px 0;
+    }
+
+    .hint {
+      color: #888;
+      font-size: 13px;
+      margin-top: 25px;
+    }
+
+    @media (max-width: 450px) {
+      .game {
+        padding: 22px 15px;
+      }
+
+      .choice {
+        padding: 20px 5px;
+        min-height: 110px;
+      }
+
+      h1 {
+        font-size: 32px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <main class="game">
+
+    <h1>Ż czy RZ? ✏️</h1>
+    <p class="subtitle">
+      Wybierz poprawnie napisane słowo!
+    </p>
+
+    <section id="playing">
+
+      <div class="stats">
+        <span id="counter">Słowo 1 z 10</span>
+        <span>
+          ✅ <span id="score">0</span>
+          &nbsp; 🔥 <span id="streak">0</span>
+        </span>
+      </div>
+
+      <div class="progress">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+
+      <div class="question">
+        Które słowo jest napisane poprawnie?
+      </div>
+
+      <div class="choices">
+
+        <button class="choice left" id="leftButton">
+          <span class="word" id="leftWord"></span>
+          <span class="key">← Lewa strzałka</span>
+        </button>
+
+        <button class="choice right" id="rightButton">
+          <span class="word" id="rightWord"></span>
+          <span class="key">Prawa strzałka →</span>
+        </button>
+
+      </div>
+
+      <div class="feedback" id="feedback"></div>
+
+      <button class="next hidden" id="nextButton">
+        Następne słowo →
+      </button>
+
+      <p class="hint">
+        Wybieraj strzałkami na klawiaturze
+        lub klikając przyciski.
+      </p>
+
+    </section>
+
+    <section id="finished" class="hidden">
+
+      <h2 id="finalTitle">Koniec rundy!</h2>
+
+      <div class="result" id="finalScore"></div>
+
+      <p id="finalMessage"></p>
+
+      <button class="next" id="restartButton">
+        Zagraj jeszcze raz ↻
+      </button>
+
+    </section>
+
+  </main>
+
+  <script>
+
+    // BAZA SŁÓW
+
+    const words = {
+
+      "ż": [
+        "żaba",
+        "żuk",
+        "żółw",
+        "żółty",
+        "żubr",
+        "żyrafa",
+        "żagiel",
+        "żarówka",
+        "żelazko",
+        "żart",
+        "żona",
+        "żyto",
+        "żurek",
+        "jeż",
+        "wąż",
+        "ryż",
+        "łyżka",
+        "nożyczki",
+        "róża",
+        "wieża",
+        "plaża",
+        "kałuża",
+        "książka",
+        "księżyc",
+        "śnieżka",
+        "leżak",
+        "koleżanka",
+        "duży",
+        "odważny",
+        "strażak",
+        "garaż",
+        "bagaż"
+      ],
+
+      "rz": [
+        "rzeka",
+        "rzepa",
+        "rzodkiewka",
+        "rzęsa",
+        "rzut",
+        "rzucić",
+        "rzadko",
+        "rząd",
+        "grzyb",
+        "grzebień",
+        "grzmot",
+        "krzesło",
+        "krzak",
+        "krzyk",
+        "krzywy",
+        "drzewo",
+        "drzwi",
+        "drzemka",
+        "drzazga",
+        "brzoza",
+        "brzeg",
+        "brzuch",
+        "brzydki",
+        "trzy",
+        "trzeba",
+        "trzmiel",
+        "przygoda",
+        "przyroda",
+        "przyjaciel",
+        "przerwa",
+        "przedszkole",
+        "orzech",
+        "orzeł",
+        "marzec",
+        "kurz",
+        "talerz",
+        "lekarz",
+        "malarz",
+        "zwierzę",
+        "warzywa"
+      ]
+    };
+
+
+    // ELEMENTY STRONY
+
+    const leftButton =
+      document.getElementById("leftButton");
+
+    const rightButton =
+      document.getElementById("rightButton");
+
+    const nextButton =
+      document.getElementById("nextButton");
+
+    const restartButton =
+      document.getElementById("restartButton");
+
+    const feedback =
+      document.getElementById("feedback");
+
+
+    // STAN GRY
+
+    let questions = [];
+    let questionIndex = 0;
+    let score = 0;
+    let streak = 0;
+    let answered = false;
+
+    const QUESTIONS_PER_ROUND = 10;
+
+
+    // LOSOWANIE TABLICY
+
+    function shuffle(array) {
+
+      const result = [...array];
+
+      for (let i = result.length - 1; i > 0; i--) {
+
+        const j = Math.floor(
+          Math.random() * (i + 1)
+        );
+
+        [result[i], result[j]] =
+          [result[j], result[i]];
+
+      }
+
+      return result;
+    }
+
+
+    // PRZYGOTOWANIE RUNDY
+
+    function startGame() {
+
+      const zWords = shuffle(words["ż"])
+        .slice(0, 5)
+        .map(word => ({
+          word: word,
+          type: "ż"
+        }));
+
+      const rzWords = shuffle(words["rz"])
+        .slice(0, 5)
+        .map(word => ({
+          word: word,
+          type: "rz"
+        }));
+
+      questions = shuffle([
+        ...zWords,
+        ...rzWords
+      ]);
+
+      questionIndex = 0;
+      score = 0;
+      streak = 0;
+
+      document.getElementById("playing")
+        .classList.remove("hidden");
+
+      document.getElementById("finished")
+        .classList.add("hidden");
+
+      showQuestion();
+    }
+
+
+    // WYŚWIETLANIE PYTANIA
+
+    function showQuestion() {
+
+      answered = false;
+
+      const question = questions[questionIndex];
+
+      const correctWord = question.word;
+
+      // Tworzymy dwie wersje słowa
+
+      let zVersion;
+      let rzVersion;
+
+      if (question.type === "ż") {
+
+        zVersion = correctWord;
+
+        rzVersion = correctWord.replace(
+          "ż", "rz"
+        );
+
+      } else {
+
+        rzVersion = correctWord;
+
+        zVersion = correctWord.replace(
+          "rz", "ż"
+        );
+      }
+
+      // Lewa strona zawsze Ż
+      // Prawa strona zawsze RZ
+
+      document.getElementById("leftWord")
+        .textContent = zVersion;
+
+      document.getElementById("rightWord")
+        .textContent = rzVersion;
+
+      document.getElementById("counter")
+        .textContent =
+        `Słowo ${questionIndex + 1} z ${QUESTIONS_PER_ROUND}`;
+
+      updateStats();
+
+      leftButton.className = "choice left";
+      rightButton.className = "choice right";
+
+      leftButton.disabled = false;
+      rightButton.disabled = false;
+
+      feedback.textContent = "";
+      feedback.className = "feedback";
+
+      nextButton.classList.add("hidden");
+
+      updateProgress();
+    }
+
+
+    // SPRAWDZANIE ODPOWIEDZI
+
+    function checkAnswer(selectedType) {
+
+      if (answered) {
+        return;
+      }
+
+      answered = true;
+
+      const question = questions[questionIndex];
+
+      const isCorrect =
+        selectedType === question.type;
+
+      if (isCorrect) {
+
+        score++;
+        streak++;
+
+        feedback.textContent =
+          "✅ Brawo! " + question.word;
+
+        feedback.className =
+          "feedback good-text";
+
+      } else {
+
+        streak = 0;
+
+        feedback.textContent =
+          "❌ Poprawnie: " + question.word;
+
+        feedback.className =
+          "feedback bad-text";
+      }
+
+      // Podświetlenie odpowiedzi
+
+      const correctButton =
+        question.type === "ż"
+          ? leftButton
+          : rightButton;
+
+      const wrongButton =
+        question.type === "ż"
+          ? rightButton
+          : leftButton;
+
+      correctButton.classList.add("correct");
+
+      if (!isCorrect) {
+        wrongButton.classList.add("wrong");
+      }
+
+      leftButton.disabled = true;
+      rightButton.disabled = true;
+
+      updateStats();
+
+      document.getElementById("progressBar")
+        .style.width =
+        ((questionIndex + 1) /
+          QUESTIONS_PER_ROUND * 100) + "%";
+
+      if (questionIndex === QUESTIONS_PER_ROUND - 1) {
+
+        nextButton.textContent = "Zobacz wynik →";
+
+      } else {
+
+        nextButton.textContent = "Następne słowo →";
+      }
+
+      nextButton.classList.remove("hidden");
+
+      nextButton.focus();
+    }
+
+
+    // AKTUALIZACJA PUNKTÓW
+
+    function updateStats() {
+
+      document.getElementById("score")
+        .textContent = score;
+
+      document.getElementById("streak")
+        .textContent = streak;
+    }
+
+
+    // PASEK POSTĘPU
+
+    function updateProgress() {
+
+      const percent =
+        questionIndex / QUESTIONS_PER_ROUND * 100;
+
+      document.getElementById("progressBar")
+        .style.width = percent + "%";
+    }
+
+
+    // NASTĘPNE PYTANIE
+
+    function nextQuestion() {
+
+      if (!answered) {
+        return;
+      }
+
+      questionIndex++;
+
+      if (questionIndex >= QUESTIONS_PER_ROUND) {
+
+        finishGame();
+
+      } else {
+
+        showQuestion();
+      }
+    }
+
+
+    // KONIEC RUNDY
+
+    function finishGame() {
+
+      document.getElementById("playing")
+        .classList.add("hidden");
+
+      document.getElementById("finished")
+        .classList.remove("hidden");
+
+      document.getElementById("finalScore")
+        .textContent =
+        `${score}/${QUESTIONS_PER_ROUND}`;
+
+      let title;
+      let message;
+
+      if (score === 10) {
+
+        title = "🏆 Wszystko poprawnie!";
+        message = "Fantastycznie! Znasz wszystkie słowa!";
+
+      } else if (score >= 7) {
+
+        title = "🌟 Świetna robota!";
+        message = "Bardzo dobry wynik!";
+
+      } else {
+
+        title = "🌱 Dobra próba!";
+        message = "Ćwiczenie czyni mistrza!";
+      }
+
+      document.getElementById("finalTitle")
+        .textContent = title;
+
+      document.getElementById("finalMessage")
+        .textContent = message;
+    }
+
+
+    // OBSŁUGA PRZYCISKÓW
+
+    leftButton.addEventListener("click", () => {
+      checkAnswer("ż");
+    });
+
+    rightButton.addEventListener("click", () => {
+      checkAnswer("rz");
+    });
+
+    nextButton.addEventListener("click", nextQuestion);
+
+    restartButton.addEventListener("click", startGame);
+
+
+    // STEROWANIE KLAWIATURĄ
+
+    document.addEventListener("keydown", event => {
+
+      if (event.repeat) {
+        return;
+      }
+
+      const playing = !document
+        .getElementById("playing")
+        .classList.contains("hidden");
+
+      if (!playing) {
+
+        if (event.key === "Enter") {
+          startGame();
+        }
+
+        return;
+      }
+
+      if (!answered) {
+
+        if (event.key === "ArrowLeft") {
+
+          event.preventDefault();
+          checkAnswer("ż");
+
+        } else if (event.key === "ArrowRight") {
+
+          event.preventDefault();
+          checkAnswer("rz");
+        }
+
+      } else {
+
+        if (
+          event.key === "Enter" ||
+          event.key === " "
+        ) {
+
+          event.preventDefault();
+          nextQuestion();
+        }
+      }
+    });
+
+
+    // URUCHOMIENIE GRY
+
+    startGame();
+
+  </script>
+
+</body>
+</html>
