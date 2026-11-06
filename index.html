@@ -66,7 +66,6 @@
   <main class="shell">
     <header class="heading">
       <div class="eyebrow">Ortografia · klasa 2</div>
-      <h1>Ż / RZ i U / Ó <span aria-hidden="true">✏️</span></h1>
       <p>Wybierz brakującą literę. Każda runda ma 10 słów.</p>
     </header>
     <section class="board" aria-label="Gra ortograficzna">
@@ -192,32 +191,123 @@ const words = {
 
 };
 
-      const el = (id) => document.getElementById(id);
-      const used = Object.fromEntries(Object.keys(words).map(type => [type, new Set()]));
-      let round = [], index = 0, score = 0, streak = 0, bestStreak = 0, answered = false, roundNumber = 0;
-      const shuffle = (a) => { for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a; };
-      function draw(type, n){
-        let available = words[type].filter(w=>!used[type].has(w));
-        if(available.length<n){used[type].clear(); available = [...words[type]];}
-        const chosen = shuffle(available).slice(0,n);
-        chosen.forEach(w=>used[type].add(w));
-        return chosen.map(word=>({word,type}));
-      }
-      function start(){
-        // 5 pytań Ż/RZ i 5 pytań U/Ó; strony odpowiedzi są zrównoważone.
-        const alternate = (roundNumber++ % 2 === 0);
-        round = shuffle([
-          ...draw('ż', alternate ? 3 : 2),
-          ...draw('rz', alternate ? 2 : 3),
-          ...draw('u', alternate ? 2 : 3),
-          ...draw('ó', alternate ? 3 : 2)
-        ]);
-        index=0;score=0;streak=0;bestStreak=0;answered=false;
-        el('game').classList.remove('hidden');el('end').classList.add('hidden');show();
-      }
+
+const extraWords = `
+  żart królewicz księżniczka podróżuje
+  będzie zagadka odpowiedź orzechy
+  główki sposób ogródek brzuch mucha
+  gruszka lasu ważka jeż
+`.trim().split(/\s+/);
+
+const special = {
+  zagadka: {
+    type: 'd',
+    pair: ['d', 't'],
+    position: 4
+  },
+  odpowiedź: {
+    type: 'dź',
+    pair: ['dź', 'ć'],
+    position: 7
+  },
+  będzie: {
+    type: 'ę',
+    pair: ['ę', 'en'],
+    position: 1
+  }
+};
+
+// Łączymy wszystkie słowa bez duplikatów.
+const allWords = [...new Set([
+  ...Object.values(words).flat(),
+  ...extraWords
+])];
+
+
+
+const usedWords = new Set();
+
+let round = [];
+let index = 0;
+let score = 0;
+let streak = 0;
+let bestStreak = 0;
+let answered = false;
+
+const shuffle = (a) => {
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+};
+
+function createQuestion(word) {
+
+  // Zadania o specjalnej pisowni
+  if (special[word]) {
+    return { word, ...special[word] };
+  }
+
+  // Szukamy wszystkich możliwych miejsc do sprawdzenia.
+  const matches = [...word.matchAll(/rz|ż|ó|u/g)];
+
+  if (matches.length === 0) {
+    throw new Error(`Brak litery do sprawdzenia: ${word}`);
+  }
+
+  // Losujemy jedno miejsce.
+  const match = matches[
+    Math.floor(Math.random() * matches.length)
+  ];
+
+  const type = match[0];
+
+  const pair = ['ż', 'rz'].includes(type)
+    ? ['ż', 'rz']
+    : ['u', 'ó'];
+
+  return {
+    word,
+    type,
+    pair,
+    position: match.index
+  };
+}
+
+function start() {
+
+  let available = allWords.filter(
+    word => !usedWords.has(word)
+  );
+
+  // Reset puli po wykorzystaniu słów
+  if (available.length < 10) {
+    usedWords.clear();
+    available = [...allWords];
+  }
+
+  const selected = shuffle(available).slice(0, 10);
+
+  selected.forEach(word => usedWords.add(word));
+
+  round = shuffle(selected.map(createQuestion));
+
+  index = 0;
+  score = 0;
+  streak = 0;
+  bestStreak = 0;
+  answered = false;
+
+  el('game').classList.remove('hidden');
+  el('end').classList.add('hidden');
+
+  show();
+}
+
       function show(){
         const q = round[index]; answered=false;
-        const pair = ['ż', 'rz'].includes(q.type) ? ['ż', 'rz'] : ['u', 'ó'];
+        const pair = q.pair;
         const leftButton = el('choose-z');
         const rightButton = el('choose-rz');
         leftButton.dataset.type = pair[0];
@@ -226,8 +316,8 @@ const words = {
         rightButton.querySelector('.letter').textContent = pair[1].toUpperCase();
         leftButton.setAttribute('aria-label', `Wstaw ${pair[0]}, strzałka w lewo`);
         rightButton.setAttribute('aria-label', `Wstaw ${pair[1]}, strzałka w prawo`);
-        el('prompt').textContent = `Czego brakuje? ${pair[0].toUpperCase()} czy ${pair[1].toUpperCase()}?`;
-        const position = q.word.indexOf(q.type);
+        el('prompt').textContent = 'Czego brakuje?';
+        const position = q.position;
         if(position===-1)throw new Error('Błąd w zestawie słów');
         const gap=document.createElement('span');gap.className='blank';gap.textContent=' ';
         const word=el('word');word.classList.remove('done');word.replaceChildren(document.createTextNode(q.word.slice(0,position)),gap,document.createTextNode(q.word.slice(position+q.type.length)));
