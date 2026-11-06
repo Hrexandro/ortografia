@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f5f7ff">
-  <title>Trening ortografii – Ż/RZ i U/Ó</title>
+  <title>Trening ortografii</title>
   <style>
     :root{font-family:ui-rounded,'Segoe UI',system-ui,sans-serif;color:#24304f;background:#f5f7ff}
     *{box-sizing:border-box}
@@ -66,8 +66,8 @@
   <main class="shell">
     <header class="heading">
       <div class="eyebrow">Ortografia · klasa 2</div>
-      <h1>Ż / RZ i U / Ó <span aria-hidden="true">✏️</span></h1>
-      <p>Wybierz brakującą literę. Każda runda ma 10 słów.</p>
+      <h1>Trening ortografii <span aria-hidden="true">✏️</span></h1>
+      <p>Wybierz brakującą literę lub dwuznak. Każda runda ma 10 słów.</p>
     </header>
     <section class="board" aria-label="Gra ortograficzna">
       <div id="game">
@@ -130,6 +130,7 @@ const words = {
     obrażona ostrożny ostrożna ostrożnie niżej wyżej żywy żywa żywe życie
     żyje żyją życzyć życzenia pieniążek pieniążki pożyczyć pożyczka używać używa
     użycie użytek
+    podróżuje
   `.trim().split(/\s+/),
 
   "rz": `
@@ -169,6 +170,7 @@ const words = {
     nuda nudny nudna skuter skutery trud trudny trudna wujek wujkowie
     susza suszyć sucho suchy sucha suknia sukienka suwak suwaki
     rusza ruszać ruszył tukan tukany surówka surówki puszka puszki
+    gruszka lasu
   `.trim().split(/\s+/),
 
   "ó": `
@@ -188,49 +190,103 @@ const words = {
     fasólka fasólki córka córki córeczka córeczki rób zrób zróbmy
     dwór szóstka szóstki szósty szósta szóste mózg mózgi mózgowy
     wzór wtórny wtórna
+    królewicz główki sposób
   `.trim().split(/\s+/)
 
 };
 
       const el = (id) => document.getElementById(id);
-      const used = Object.fromEntries(Object.keys(words).map(type => [type, new Set()]));
-      let round = [], index = 0, score = 0, streak = 0, bestStreak = 0, answered = false, roundNumber = 0;
-      const shuffle = (a) => { for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a; };
-      function draw(type, n){
-        let available = words[type].filter(w=>!used[type].has(w));
-        if(available.length<n){used[type].clear(); available = [...words[type]];}
-        const chosen = shuffle(available).slice(0,n);
-        chosen.forEach(w=>used[type].add(w));
-        return chosen.map(word=>({word,type}));
+      const shuffle = (a) => {
+        for(let i=a.length-1;i>0;i--){
+          const j=Math.floor(Math.random()*(i+1));
+          [a[i],a[j]]=[a[j],a[i]];
+        }
+        return a;
+      };
+
+      // Jedna pula słów bez sztywnego podziału na Ż/RZ i U/Ó.
+      // Map zapewnia, że wyraz znajdujący się w dwóch listach
+      // występuje tylko raz w cyklu losowania.
+      const allWords = [...new Set([
+        ...Object.values(words).flat(),
+        'będzie', 'zagadka', 'odpowiedź'
+      ])];
+
+      // Zadania wykraczające poza Ż/RZ i U/Ó.
+      // W "zagadka" ćwiczymy D/T (zagadka / zagatka).
+      const special = {
+        'będzie':   { answer:'ę',  pair:['ę','en'], target:'ę' },
+        'zagadka':  { answer:'d',  pair:['d','t'],  target:'d' },
+        'odpowiedź':{ answer:'dź', pair:['dź','ć'],target:'dź' }
+      };
+
+      let remainingWords = [];
+      let round = [], index = 0, score = 0, streak = 0,
+          bestStreak = 0, answered = false;
+
+      function makeQuestion(word){
+        if(special[word]){
+          const data=special[word];
+          return {
+            word,
+            answer:data.answer,
+            pair:data.pair,
+            position:word.indexOf(data.target),
+            targetLength:data.target.length,
+            correct:null
+          };
+        }
+
+        // Każde wystąpienie Ż/RZ/U/Ó jest osobnym możliwym zadaniem.
+        // Np. w "podróżuje" mogą zostać ukryte Ó, Ż albo U.
+        const matches = [...word.matchAll(/rz|ż|u|ó/g)];
+        if(matches.length===0) throw new Error(`Brak litery do sprawdzenia: ${word}`);
+        const match=matches[Math.floor(Math.random()*matches.length)];
+        const answer=match[0];
+        const pair=['rz','ż'].includes(answer) ? ['ż','rz'] : ['u','ó'];
+        return {
+          word,answer,pair,
+          position:match.index,
+          targetLength:answer.length,
+          correct:null
+        };
       }
+
       function start(){
-        // 5 pytań Ż/RZ i 5 pytań U/Ó; strony odpowiedzi są zrównoważone.
-        const alternate = (roundNumber++ % 2 === 0);
-        round = shuffle([
-          ...draw('ż', alternate ? 3 : 2),
-          ...draw('rz', alternate ? 2 : 3),
-          ...draw('u', alternate ? 2 : 3),
-          ...draw('ó', alternate ? 3 : 2)
-        ]);
+        // Losuj bez ustalonych proporcji grup i bez powtarzania słów
+        // do chwili wyczerpania całej puli.
+        round=[];
+        for(let n=0;n<10;n++){
+          if(remainingWords.length===0) remainingWords=shuffle([...allWords]);
+          round.push(makeQuestion(remainingWords.pop()));
+        }
         index=0;score=0;streak=0;bestStreak=0;answered=false;
-        el('game').classList.remove('hidden');el('end').classList.add('hidden');show();
+        el('game').classList.remove('hidden');
+        el('end').classList.add('hidden');
+        show();
       }
       function show(){
-        const q = round[index]; answered=false;
-        const pair = ['ż', 'rz'].includes(q.type) ? ['ż', 'rz'] : ['u', 'ó'];
-        const leftButton = el('choose-z');
-        const rightButton = el('choose-rz');
-        leftButton.dataset.type = pair[0];
-        rightButton.dataset.type = pair[1];
-        leftButton.querySelector('.letter').textContent = pair[0].toUpperCase();
-        rightButton.querySelector('.letter').textContent = pair[1].toUpperCase();
-        leftButton.setAttribute('aria-label', `Wstaw ${pair[0]}, strzałka w lewo`);
-        rightButton.setAttribute('aria-label', `Wstaw ${pair[1]}, strzałka w prawo`);
-        el('prompt').textContent = `Czego brakuje? ${pair[0].toUpperCase()} czy ${pair[1].toUpperCase()}?`;
-        const position = q.word.indexOf(q.type);
-        if(position===-1)throw new Error('Błąd w zestawie słów');
-        const gap=document.createElement('span');gap.className='blank';gap.textContent=' ';
-        const word=el('word');word.classList.remove('done');word.replaceChildren(document.createTextNode(q.word.slice(0,position)),gap,document.createTextNode(q.word.slice(position+q.type.length)));
+        const q=round[index]; answered=false;
+        const [left,right]=q.pair;
+        const leftButton=el('choose-z');
+        const rightButton=el('choose-rz');
+        leftButton.dataset.type=left;
+        rightButton.dataset.type=right;
+        leftButton.querySelector('.letter').textContent=left.toUpperCase();
+        rightButton.querySelector('.letter').textContent=right.toUpperCase();
+        leftButton.setAttribute('aria-label',`Wstaw ${left}, strzałka w lewo`);
+        rightButton.setAttribute('aria-label',`Wstaw ${right}, strzałka w prawo`);
+        el('prompt').textContent='Czego brakuje?';
+        const gap=document.createElement('span');
+        gap.className='blank';
+        gap.textContent=' ';
+        const word=el('word');
+        word.classList.remove('done');
+        word.replaceChildren(
+          document.createTextNode(q.word.slice(0,q.position)),
+          gap,
+          document.createTextNode(q.word.slice(q.position+q.targetLength))
+        );
         el('counter').textContent=`Słowo ${index+1} z ${round.length}`;
         el('score').textContent=`✓ ${score} poprawnych`;
         el('streak').textContent=`🔥 Seria: ${streak}`;
@@ -242,11 +298,11 @@ const words = {
       }
       function choose(type){
         if(answered||el('game').classList.contains('hidden'))return;
-        answered=true;const q=round[index];const correct=(type===q.type);
+        answered=true;const q=round[index];const correct=(type===q.answer);
         q.correct = correct;
         if(correct){score++;streak++;bestStreak=Math.max(streak,bestStreak);}else{streak=0;}
         el('word').textContent=q.word;el('word').classList.add('done');
-        el('feedback').textContent=correct?`✅ Brawo! ${q.word}`:`❌ Prawidłowo: ${q.word} (${q.type.toUpperCase()})`;
+        el('feedback').textContent=correct?`✅ Brawo! ${q.word}`:`❌ Prawidłowo: ${q.word} (${q.answer.toUpperCase()})`;
         el('feedback').className=`feedback ${correct?'correct':'wrong'}`;
         el('score').textContent=`✓ ${score} poprawnych`;
         el('streak').textContent=`🔥 Seria: ${streak}`;
