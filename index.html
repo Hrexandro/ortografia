@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f5f7ff">
-  <title>Ż czy RZ? – Trening ortografii</title>
+  <title>Trening ortografii – Ż/RZ i U/Ó</title>
   <style>
     :root{font-family:ui-rounded,'Segoe UI',system-ui,sans-serif;color:#24304f;background:#f5f7ff}
     *{box-sizing:border-box}
@@ -50,6 +50,13 @@
     .end .result{font-size:65px;letter-spacing:-2px;font-weight:950;color:#555bcc;margin:18px 0 4px}
     .end p{color:#68738e;font-size:17px;line-height:1.5}
     .explain{text-align:center;font-size:14px;color:#77829e;margin:18px 0 0}
+    .review{text-align:left;margin:28px 0 22px}
+    .review h3{text-align:center;font-size:19px;margin:0 0 13px;color:#344060}
+    .review-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+    .review-list li{background:#f0f4ff;border-radius:11px;padding:10px 12px;font-size:17px;font-weight:700;overflow-wrap:anywhere}
+    .review-list li.wrong{background:#ffe9e6;color:#b33029}
+    .review-list .mark{margin-right:8px;font-weight:900}
+    .review-note{text-align:center;font-size:13px;color:#68738e;margin:10px 0 0}
     button:focus-visible{outline:4px solid #1d2a50;outline-offset:4px}
     @media(max-width:520px){.shell{padding:20px 13px 35px}.heading{margin-bottom:22px}.board{padding:21px 17px;border-radius:24px}.question{padding:40px 0 19px}.choices{gap:10px}.choice{min-height:105px}.feedback{font-size:17px}.word{font-size:clamp(36px,9vw,58px)}.heading p{font-size:14px}}
     @media(prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -59,7 +66,7 @@
   <main class="shell">
     <header class="heading">
       <div class="eyebrow">Ortografia · klasa 2</div>
-      <h1>Ż czy RZ? <span aria-hidden="true">✏️</span></h1>
+      <h1>Ż / RZ i U / Ó <span aria-hidden="true">✏️</span></h1>
       <p>Wybierz brakującą literę. Każda runda ma 10 słów.</p>
     </header>
     <section class="board" aria-label="Gra ortograficzna">
@@ -73,7 +80,7 @@
         </div>
         <div class="progress" role="progressbar" aria-label="Postęp rundy" aria-valuemin="0" aria-valuemax="10" aria-valuenow="0" id="progress"><div class="progress-fill" id="progress-fill"></div></div>
         <div class="question">
-          <div class="prompt">Czego brakuje?</div>
+          <div class="prompt" id="prompt">Czego brakuje?</div>
           <div class="word" id="word" aria-live="polite"></div>
         </div>
         <div class="feedback" id="feedback" role="status" aria-live="polite"></div>
@@ -89,6 +96,11 @@
         <h2 id="end-title">Koniec rundy!</h2>
         <div class="result" id="final-score">0/10</div>
         <p id="end-message"></p>
+        <div class="review">
+          <h3>Słowa z tej rundy</h3>
+          <ol class="review-list" id="review-list"></ol>
+          <p class="review-note">Na czerwono: słowa z błędną odpowiedzią.</p>
+        </div>
         <button type="button" class="restart" id="restart">Zagraj jeszcze raz ↻</button>
         <p class="explain">W kolejnej rundzie pojawią się inne słowa.</p>
       </div>
@@ -139,13 +151,50 @@ const words = {
     parzy oparzenie korzeń korzenie korzonki pierze pierzyna dworzec burza burze
     burzowy chrząszcz marzenie marzenia marzyć podwórze porządek porządki porządny porządnie
     porzeczka porzeczki poprzeczka pokrzywa przód rzeźba
+  `.trim().split(/\s+/),
+
+  "u": `
+    ul ule ulica ulice uliczka uliczki uczeń uczniowie uczyć uczy
+    umie umiem ucho uszy usta usłyszeć ubranie ubrania ubierać ubiera
+    urodziny urodzić ucieka uciekać ustawia upadek upada udaje udany udało
+    układa układać układanka uwaga ulotka ulotki utwór uśmiech uśmiechy
+    kubek kubki kura kury kurka kurki kula kule kulka kulki
+    burak buraki budka budki but buty butelka butelki budynek budynki
+    budować buduje budzik budziki buda budy rura rury rurka rurki
+    rudy ruda rudzielec lupa lupy lustro luty lukier ludzie luneta
+    cukier cukierki cukiernia cukinia pudełko pudełka puch puchar puchaty
+    mucha muchy muszla muszle muzyka muzyczny szuflada szuflady szuka szukać
+    szum szumi szumią duma dumny dumna tulipan tulipany tupać tupie
+    guma gumy gumka gumki guzik guziki futro futra numer numery
+    nuda nudny nudna skuter skutery trud trudny trudna wujek wujkowie
+    susza suszyć sucho suchy sucha suknia sukienka suwak suwaki
+    rusza ruszać ruszył tukan tukany surówka surówki puszka puszki
+  `.trim().split(/\s+/),
+
+  "ó": `
+    góra góry górka górki górski góral górale górnik górnicy
+    król królowa królik króliki królewna królestwo królowie królewski
+    wóz wózek wózki wózeczek wózeczki samochód zachód ogród ogródek ogródki
+    stół stołówka mróz wróbel wróble wróbelek wróbelki jaskółka jaskółki
+    wiewiórka wiewiórki pióro pióra piórko piórka piórnik piórniki
+    skóra skóry skórka skórki skórzany mówi mówią mówić mówił mówisz
+    mówimy mówcie ósemka ósemki ósmy ósma ósme późno późny późna
+    później spóźniony spóźnienie spóźnia krótki krótka krótkie krócej wkrótce
+    wół wóły bóbr miód głód źródło źródła źródeł źródlany
+    powrót powrócić wrócić wrócę wrócił wróciła wrócimy spód spódnica spódniczka
+    próba próby próbować próbował próbowała próbuję półka półki półeczka północ
+    północny północna rów równy równa równo równanie płótno płótna
+    chór chóry chórzysta ogórek ogórki jagódka jagódki borówka borówki
+    fasólka fasólki córka córki córeczka córeczki rób zrób zróbmy
+    dwór szóstka szóstki szósty szósta szóste mózg mózgi mózgowy
+    wzór wtórny wtórna
   `.trim().split(/\s+/)
 
 };
 
       const el = (id) => document.getElementById(id);
-      const used = {'ż':new Set(),'rz':new Set()};
-      let round = [], index = 0, score = 0, streak = 0, bestStreak = 0, answered = false;
+      const used = Object.fromEntries(Object.keys(words).map(type => [type, new Set()]));
+      let round = [], index = 0, score = 0, streak = 0, bestStreak = 0, answered = false, roundNumber = 0;
       const shuffle = (a) => { for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a; };
       function draw(type, n){
         let available = words[type].filter(w=>!used[type].has(w));
@@ -155,12 +204,29 @@ const words = {
         return chosen.map(word=>({word,type}));
       }
       function start(){
-        round = shuffle([...draw('ż',5),...draw('rz',5)]);
+        // 5 pytań Ż/RZ i 5 pytań U/Ó; strony odpowiedzi są zrównoważone.
+        const alternate = (roundNumber++ % 2 === 0);
+        round = shuffle([
+          ...draw('ż', alternate ? 3 : 2),
+          ...draw('rz', alternate ? 2 : 3),
+          ...draw('u', alternate ? 2 : 3),
+          ...draw('ó', alternate ? 3 : 2)
+        ]);
         index=0;score=0;streak=0;bestStreak=0;answered=false;
         el('game').classList.remove('hidden');el('end').classList.add('hidden');show();
       }
       function show(){
         const q = round[index]; answered=false;
+        const pair = ['ż', 'rz'].includes(q.type) ? ['ż', 'rz'] : ['u', 'ó'];
+        const leftButton = el('choose-z');
+        const rightButton = el('choose-rz');
+        leftButton.dataset.type = pair[0];
+        rightButton.dataset.type = pair[1];
+        leftButton.querySelector('.letter').textContent = pair[0].toUpperCase();
+        rightButton.querySelector('.letter').textContent = pair[1].toUpperCase();
+        leftButton.setAttribute('aria-label', `Wstaw ${pair[0]}, strzałka w lewo`);
+        rightButton.setAttribute('aria-label', `Wstaw ${pair[1]}, strzałka w prawo`);
+        el('prompt').textContent = `Czego brakuje? ${pair[0].toUpperCase()} czy ${pair[1].toUpperCase()}?`;
         const position = q.word.indexOf(q.type);
         if(position===-1)throw new Error('Błąd w zestawie słów');
         const gap=document.createElement('span');gap.className='blank';gap.textContent=' ';
@@ -177,6 +243,7 @@ const words = {
       function choose(type){
         if(answered||el('game').classList.contains('hidden'))return;
         answered=true;const q=round[index];const correct=(type===q.type);
+        q.correct = correct;
         if(correct){score++;streak++;bestStreak=Math.max(streak,bestStreak);}else{streak=0;}
         el('word').textContent=q.word;el('word').classList.add('done');
         el('feedback').textContent=correct?`✅ Brawo! ${q.word}`:`❌ Prawidłowo: ${q.word} (${q.type.toUpperCase()})`;
@@ -198,18 +265,29 @@ const words = {
         el('final-score').textContent=`${score}/${round.length}`;
         el('trophy').textContent=score===10?'🏆':score>=7?'🌟':'🌱';
         el('end-title').textContent=score===10?'Wszystko poprawnie!':score>=7?'Świetna robota!':'Dobra próba!';
-        el('end-message').textContent=score===10?'Znasz wszystkie słowa z tej rundy!':score>=7?'Coraz lepiej znasz pisownię ż i rz.':'Ćwiczenie czyni mistrza. W nowej rundzie spróbuj ponownie!';
+        el('end-message').textContent=score===10?'Znasz wszystkie słowa z tej rundy!':score>=7?'Coraz lepiej znasz pisownię trudnych słów.':'Ćwiczenie czyni mistrza. W nowej rundzie spróbuj ponownie!';
+        const review = el('review-list');
+        review.replaceChildren();
+        round.forEach(q => {
+          const item = document.createElement('li');
+          if (!q.correct) item.classList.add('wrong');
+          const mark = document.createElement('span');
+          mark.className = 'mark';
+          mark.textContent = q.correct ? '✓' : '✗';
+          item.append(mark, document.createTextNode(q.word));
+          review.appendChild(item);
+        });
         el('restart').focus({preventScroll:true});
       }
-      el('choose-z').addEventListener('click',()=>choose('ż'));
-      el('choose-rz').addEventListener('click',()=>choose('rz'));
+      el('choose-z').addEventListener('click',()=>choose(el('choose-z').dataset.type));
+      el('choose-rz').addEventListener('click',()=>choose(el('choose-rz').dataset.type));
       el('next').addEventListener('click',advance);
       el('restart').addEventListener('click',start);
       document.addEventListener('keydown',(event)=>{
         if(event.altKey||event.ctrlKey||event.metaKey||event.repeat)return;
         if(el('end').classList.contains('hidden')){
-          if(!answered&&event.key==='ArrowLeft'){event.preventDefault();choose('ż');}
-          else if(!answered&&event.key==='ArrowRight'){event.preventDefault();choose('rz');}
+          if(!answered&&event.key==='ArrowLeft'){event.preventDefault();choose(el('choose-z').dataset.type);}
+          else if(!answered&&event.key==='ArrowRight'){event.preventDefault();choose(el('choose-rz').dataset.type);}
           else if(answered&&(event.key==='Enter'||event.key===' ')){event.preventDefault();advance();}
         }else if(event.key==='Enter'||event.key===' '){event.preventDefault();start();}
       });
