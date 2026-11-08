@@ -60,10 +60,93 @@
     button:focus-visible{outline:4px solid #1d2a50;outline-offset:4px}
     @media(max-width:520px){.shell{padding:20px 13px 35px}.heading{margin-bottom:22px}.board{padding:21px 17px;border-radius:24px}.question{padding:40px 0 19px}.choices{gap:10px}.choice{min-height:105px}.feedback{font-size:17px}.word{font-size:clamp(36px,9vw,58px)}.heading p{font-size:14px}}
     @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+  
+.mode-switch {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.mode-switch button {
+  flex: 1;
+  border: 2px solid #c9d0e8;
+  border-radius: 15px;
+  padding: 13px 8px;
+  background: white;
+  color: #344060;
+  font-weight: 800;
+}
+
+.mode-switch button.active {
+  background: #6b61d9;
+  color: white;
+  border-color: #6b61d9;
+}
+
+.clock-wrap {
+  text-align: center;
+  padding: 20px 0 5px;
+}
+
+.clock-prompt {
+  font-size: 21px;
+  font-weight: 800;
+  margin: 12px 0 18px;
+}
+
+.clock-face {
+  display: block;
+  width: min(100%, 300px);
+  margin: 0 auto 24px;
+}
+
+.clock-wrap label {
+  display: block;
+  font-weight: 700;
+  color: #47516f;
+  margin-bottom: 12px;
+}
+
+.clock-input {
+  width: 160px;
+  max-width: 100%;
+  padding: 13px;
+  border: 2px solid #b7c0e3;
+  border-radius: 13px;
+  text-align: center;
+  font-size: 28px;
+  font-weight: 800;
+  color: #26345a;
+}
+
+.clock-feedback {
+  min-height: 58px;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  text-align: center;
+}
+
+.clock-feedback.correct {
+  color: #14855f;
+}
+
+.clock-feedback.wrong {
+  color: #b85032;
+}
+
   </style>
 </head>
 <body>
   <main class="shell">
+  
+<nav class="mode-switch" aria-label="Rodzaj ćwiczenia">
+  <button type="button" id="mode-orth" class="active"
+          aria-pressed="true">✏️ Ortografia</button>
+  <button type="button" id="mode-clock"
+          aria-pressed="false">🕒 Zegar</button>
+</nav>
+
     <header class="heading">
       <div class="eyebrow">Ortografia · klasa 2</div>
       <p>Wybierz brakującą literę. Każda runda ma 10 słów.</p>
@@ -104,6 +187,106 @@
         <p class="explain">W kolejnej rundzie pojawią się inne słowa.</p>
       </div>
     </section>
+	
+<section class="board hidden" id="clock-board"
+         aria-label="Odczytywanie godzin">
+
+  <div id="clock-game">
+
+    <div class="topline">
+      <strong id="clock-counter">Zegar 1 z 10</strong>
+      <span class="stat" id="clock-score">
+        ✓ 0 poprawnych
+      </span>
+    </div>
+
+    <div class="clock-wrap">
+
+      <p class="clock-prompt">
+        Którą godzinę pokazuje zegar?
+      </p>
+
+      <svg class="clock-face"
+           viewBox="0 0 200 200"
+           role="img"
+           aria-label="Zegar analogowy">
+
+        <circle cx="100" cy="100" r="96"
+                fill="#f9faff"
+                stroke="#5266ba"
+                stroke-width="4"/>
+
+        <g id="clock-digits"></g>
+
+        <line id="clock-hour"
+              x1="100" y1="112"
+              x2="100" y2="53"
+              stroke="#29365e"
+              stroke-width="8"
+              stroke-linecap="round"/>
+
+        <line id="clock-minute"
+              x1="100" y1="113"
+              x2="100" y2="28"
+              stroke="#6b61d9"
+              stroke-width="5"
+              stroke-linecap="round"/>
+
+        <circle cx="100" cy="100" r="6"
+                fill="#29365e"/>
+
+      </svg>
+
+      <label for="clock-answer">
+        Wpisz godzinę (np. 3:00 albo 7:30)
+      </label>
+
+      <input id="clock-answer"
+             class="clock-input"
+             type="text"
+             inputmode="numeric"
+             maxlength="5"
+             placeholder="GG:MM"
+             autocomplete="off">
+
+      <div id="clock-feedback"
+           class="clock-feedback"
+           role="status"
+           aria-live="polite"></div>
+
+      <button type="button" id="clock-check"
+              class="next">Sprawdź</button>
+
+      <button type="button" id="clock-next"
+              class="next hidden">
+        Następny zegar →
+      </button>
+
+    </div>
+  </div>
+
+  <div id="clock-end" class="end hidden">
+
+    <h2>Koniec rundy!</h2>
+
+    <div id="clock-final-score"
+         class="result"></div>
+
+    <h3>Odczytane godziny</h3>
+
+    <ol id="clock-review"
+        class="review-list"></ol>
+
+    <button type="button"
+            id="clock-restart"
+            class="restart">
+      Zagraj jeszcze raz ↻
+    </button>
+
+  </div>
+
+</section>
+
   </main>
   <script>
     (() => {
@@ -374,6 +557,7 @@ function start() {
       el('next').addEventListener('click',advance);
       el('restart').addEventListener('click',start);
       document.addEventListener('keydown',(event)=>{
+  if (!el('clock-board').classList.contains('hidden')) return;
         if(event.altKey||event.ctrlKey||event.metaKey||event.repeat)return;
         if(el('end').classList.contains('hidden')){
           if(!answered&&event.key==='ArrowLeft'){event.preventDefault();choose(el('choose-z').dataset.type);}
@@ -381,7 +565,226 @@ function start() {
           else if(answered&&(event.key==='Enter'||event.key===' ')){event.preventDefault();advance();}
         }else if(event.key==='Enter'||event.key===' '){event.preventDefault();start();}
       });
-      start();
+      
+// ===== ZEGAR: osobna gra =====
+
+// Tworzenie cyfr na tarczy zegara
+const svgNS = 'http://www.w3.org/2000/svg';
+
+for (let n = 1; n <= 12; n++) {
+  const angle = (n * 30 - 90) * Math.PI / 180;
+  const digit = document.createElementNS(svgNS, 'text');
+
+  digit.setAttribute('x', 100 + 77 * Math.cos(angle));
+  digit.setAttribute('y', 100 + 77 * Math.sin(angle));
+  digit.setAttribute('text-anchor', 'middle');
+  digit.setAttribute('dominant-baseline', 'middle');
+  digit.setAttribute('font-size', '14');
+  digit.setAttribute('font-weight', '800');
+  digit.setAttribute('fill', '#29365e');
+
+  digit.textContent = n;
+  el('clock-digits').appendChild(digit);
+}
+
+let clockRound = [];
+let clockIndex = 0;
+let clockScore = 0;
+let clockAnswered = false;
+let clockStarted = false;
+
+// Rozpoczęcie rundy
+function startClock() {
+  const times = [];
+
+  for (let hour = 1; hour <= 12; hour++) {
+    times.push(
+      { hour, minute: 0 },
+      { hour, minute: 30 }
+    );
+  }
+
+  clockRound = shuffle(times).slice(0, 10);
+  clockIndex = 0;
+  clockScore = 0;
+
+  el('clock-game').classList.remove('hidden');
+  el('clock-end').classList.add('hidden');
+
+  showClock();
+}
+
+// Formatowanie godziny
+function clockText(q) {
+  return `${q.hour}:${String(q.minute).padStart(2, '0')}`;
+}
+
+// Wyświetlanie zegara
+function showClock() {
+  const q = clockRound[clockIndex];
+
+  clockAnswered = false;
+
+  // Godzinowa przesuwa się także o pół godziny
+  el('clock-hour').setAttribute(
+    'transform',
+    `rotate(${q.hour * 30 + q.minute / 2} 100 100)`
+  );
+
+  // Minutowa: 0 stopni lub 180 stopni
+  el('clock-minute').setAttribute(
+    'transform',
+    `rotate(${q.minute * 6} 100 100)`
+  );
+
+  el('clock-counter').textContent =
+    `Zegar ${clockIndex + 1} z 10`;
+
+  el('clock-score').textContent =
+    `✓ ${clockScore} poprawnych`;
+
+  el('clock-answer').value = '';
+  el('clock-answer').disabled = false;
+
+  el('clock-feedback').textContent = '';
+  el('clock-feedback').className = 'clock-feedback';
+
+  el('clock-check').classList.remove('hidden');
+  el('clock-next').classList.add('hidden');
+
+  el('clock-answer').focus({preventScroll: true});
+}
+
+// Sprawdzanie wpisanej godziny
+function checkClock() {
+  if (clockAnswered) return;
+
+  const input = el('clock-answer').value.trim();
+  const match = /^(\d{1,2})\s*[:.]\s*(\d{2})$/.exec(input);
+
+  if (
+    !match ||
+    !(+match[1] >= 1 && +match[1] <= 12) ||
+    ![0, 30].includes(+match[2])
+  ) {
+    el('clock-feedback').textContent =
+      'Wpisz np. 3:00 albo 7:30 (godziny 1–12).';
+    return;
+  }
+
+  const q = clockRound[clockIndex];
+
+  const correct =
+    +match[1] === q.hour &&
+    +match[2] === q.minute;
+
+  q.correct = correct;
+
+  if (correct) clockScore++;
+
+  clockAnswered = true;
+
+  el('clock-feedback').textContent = correct
+    ? `✓ Brawo! ${clockText(q)}`
+    : `✗ Poprawna godzina: ${clockText(q)}`;
+
+  el('clock-feedback').className =
+    `clock-feedback ${correct ? 'correct' : 'wrong'}`;
+
+  el('clock-score').textContent =
+    `✓ ${clockScore} poprawnych`;
+
+  el('clock-answer').disabled = true;
+  el('clock-check').classList.add('hidden');
+
+  el('clock-next').textContent =
+    clockIndex === 9
+      ? 'Zobacz wynik →'
+      : 'Następny zegar →';
+
+  el('clock-next').classList.remove('hidden');
+  el('clock-next').focus({preventScroll: true});
+}
+
+// Kolejny zegar lub koniec rundy
+function nextClock() {
+  if (!clockAnswered) return;
+
+  if (++clockIndex < 10) {
+    showClock();
+    return;
+  }
+
+  el('clock-game').classList.add('hidden');
+  el('clock-end').classList.remove('hidden');
+
+  el('clock-final-score').textContent =
+    `${clockScore}/10`;
+
+  const review = el('clock-review');
+  review.replaceChildren();
+
+  clockRound.forEach(q => {
+    const item = document.createElement('li');
+
+    if (!q.correct) item.classList.add('wrong');
+
+    item.textContent =
+      `${q.correct ? '✓' : '✗'} ${clockText(q)}`;
+
+    review.append(item);
+  });
+}
+
+// Przełączanie między ortografią a zegarem
+function switchMode(clock) {
+  document.querySelector('.heading')
+    .classList.toggle('hidden', clock);
+
+  document.querySelector('.board')
+    .classList.toggle('hidden', clock);
+
+  el('clock-board').classList.toggle('hidden', !clock);
+
+  el('mode-orth').classList.toggle('active', !clock);
+  el('mode-clock').classList.toggle('active', clock);
+
+  el('mode-orth').setAttribute(
+    'aria-pressed', String(!clock)
+  );
+
+  el('mode-clock').setAttribute(
+    'aria-pressed', String(clock)
+  );
+
+  if (clock && !clockStarted) {
+    clockStarted = true;
+    startClock();
+  }
+}
+
+// Obsługa przycisków
+el('mode-orth').addEventListener(
+  'click', () => switchMode(false)
+);
+
+el('mode-clock').addEventListener(
+  'click', () => switchMode(true)
+);
+
+el('clock-check').addEventListener('click', checkClock);
+el('clock-next').addEventListener('click', nextClock);
+el('clock-restart').addEventListener('click', startClock);
+
+// Enter sprawdza wpisaną godzinę
+el('clock-answer').addEventListener('keydown', event => {
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    checkClock();
+  }
+});
+
+	  start();
     })();
   </script>
 </body>
