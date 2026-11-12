@@ -315,7 +315,7 @@ const words = {
 
   "rz": `
     rzeka rzeki rzecz rzeczy rzeczka rzeczki rzepa rzepka rzodkiewka rzodkiewki
-    rzęsa rzęsy rzut rzuty rzucać rzuca rzucić rzucił rząd rzadki
+    rzęsa rzęsy rzut rzucać rzuca rzucić rzucił rząd rzadki
     rzadko grzyb grzyby grzybek grzybki grzebień grzmot grzmi grzać
     grzejnik grzeje grzeczny grzeczna grzecznie grządka grządki krzesło krzesła krzak
     krzaki krzew krzewy krzyk krzyczy krzyczeć krzywy krzywa krzywe krzywda
@@ -399,10 +399,19 @@ const special = {
 };
 
 // Łączymy wszystkie słowa bez duplikatów.
+const ambiguousWords = new Set([
+  'jeżyk',
+  'jeżyki',
+  'jeże',
+  'duży',
+  'duże',
+  'rzuty'
+]);
+
 const allWords = [...new Set([
   ...Object.values(words).flat(),
   ...extraWords
-])];
+])].filter(word => !ambiguousWords.has(word));
 
 
 const el = (id) => document.getElementById(id);
